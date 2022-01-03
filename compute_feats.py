@@ -65,6 +65,8 @@ class BagDataset():
         img = transforms.functional.to_tensor(img)
         for ind in range(input_channel - 1):
             new_path = "_".join(res[0:len(res) - 5]) + "_" + str(ind + 2) + "_" + "_".join(res[len(res) - 4:len(res)])
+            print('new path:', new_path)
+            print('res', res)
             img_new = cv2.imread(new_path, -1)[:, :, 0:1]
             img_new = transforms.functional.to_tensor(img_new)
             img = torch.cat((img, img_new), 0)
@@ -107,6 +109,8 @@ def compute_feats(args, bags_list, i_classifier, save_path=None, magnification='
         if magnification == 'single' or magnification == 'low':
             csv_file_path = glob.glob(os.path.join(bags_list[i], '*.jpg')) + glob.glob(
                 os.path.join(bags_list[i], '*.jpeg'))
+	    
+            print('csv file path:', csv_file_path)
         elif magnification == 'high':
             csv_file_path = glob.glob(os.path.join(bags_list[i], '*' + os.sep + '*.jpg')) + glob.glob(
                 os.path.join(bags_list[i], '*' + os.sep + '*.jpeg'))
@@ -190,7 +194,7 @@ def main():
                         help='Folder of the pretrained weights of high magnification, FOLDER < `simclr/runs/[FOLDER]`')
     parser.add_argument('--weights_low', default=None, type=str,
                         help='Folder of the pretrained weights of low magnification, FOLDER <`simclr/runs/[FOLDER]`')
-    parser.add_argument('--dataset', default='/mnt/yifan/data/blackgrass/features/', type=str,
+    parser.add_argument('--dataset', default='/home/fg405/rds/hpc-work/IMAGE_ARCHIVE/single/', type=str,
                         help='Dataset folder name [TCGA-lung-single]')
     args = parser.parse_args()
     gpu_ids = tuple(args.gpu_index)
@@ -294,17 +298,21 @@ def main():
 
     os.makedirs(feats_path, exist_ok=True)
     bags_list = []
+    print('bag path', bags_path)
     bags_list_temp = glob.glob(bags_path)  ##get the bags list according to Red Channel
     for i in bags_list_temp:
-        if int(i.split("_")[-4]) == 1:
+        if int(i.split("_")[-4]) == 1: #it was 4 before
             bags_list.append(i)
 
+    print(bags_list)
     if args.magnification == 'tree':
         compute_tree_feats(args, bags_list, i_classifier_l, i_classifier_h, feats_path, 'fusion')
     else:
         compute_feats(args, bags_list, i_classifier, feats_path, args.magnification)
     n_classes = glob.glob(os.path.join('datasets', args.dataset, '*' + os.path.sep))
     n_classes = sorted(n_classes)
+    #print('n_classes', n_classes)
+    print('feats_path', feats_path)
     all_df = []
     for i, item in enumerate(n_classes):
         bag_csvs = glob.glob(os.path.join(item, '*.csv'))

@@ -20,8 +20,8 @@ class Dataset():
     def __init__(self, csv_file, transform=None):
         self.files_list = pd.read_csv(csv_file)
         self.lists = []
-        self.root = "/mnt/yifan/data/blackgrass/single/"
-        for path in open("/mnt/yifan/data/blackgrass/blackgrass/data_table.txt"):
+        self.root = "/home/fg405/rds/hpc-work/IMAGE_ARCHIVE/single/"
+        for path in open("/home/fg405/rds/hpc-work/IMAGE_ARCHIVE/data_table_early_field23.txt"):
             if "tif" not in path:
                 continue
             else:

@@ -68,9 +68,9 @@ e.g.
 4. Compute features using the embedder.  
 ```
   $ cd ..
-  $ python compute_feats.py --dataset=[DATASET_NAME] --input_c C
+  $ python compute_feats.py --dataset=[DATASET_NAME]
   e.g.
-    python compute_feats.py --dataset=/mnt/yifan/data/blackgrass/ --input_c 5
+    python compute_feats.py --dataset=/mnt/yifan/data/blackgrass/
 ```
 >The feature will be saved in "[DATASET_NAME]/features/"
 >You will get bags_all.csv, CLASSNAME.csv for training.

@@ -14,47 +14,44 @@ from PIL import Image
 from collections import OrderedDict
 from skimage import exposure, io, img_as_ubyte, transform
 import warnings
+import cv2
 
 class BagDataset():
-    def __init__(self, csv_file, transform=None):
+    def __init__(self, csv_file, transform=None, input_c=5):
         self.files_list = csv_file
         self.transform = transform
+        self.input_c = input_c
+
     def __len__(self):
         return len(self.files_list)
+
     def __getitem__(self, idx):
-        path = self.files_list[idx]
-        img = Image.open(path)
-        img_name = path.split(os.sep)[-1]
-        img_pos = np.asarray([int(img_name.split('.')[0].split('_')[0]), int(img_name.split('.')[0].split('_')[1])]) # row, col
+        temp_path = self.files_list[idx]
+        res = temp_path.split("_")
+
+        input_channel = self.input_c
+        img = cv2.imread(temp_path, -1)[:, :, 0:1]
+        img = transforms.functional.to_tensor(img)
+        for ind in range(input_channel - 1):
+            new_path = "_".join(res[0:len(res) - 5]) + "_" + str(ind + 2) + "_" + "_".join(res[len(res) - 4:len(res)])
+            img_new = cv2.imread(new_path, -1)[:, :, 0:1]
+            img_new = transforms.functional.to_tensor(img_new)
+            img = torch.cat((img, img_new), 0)
+        img_pos = np.asarray(
+                    [int(temp_path.split("/")[-1].split('.')[0].split('_')[0]), int(temp_path.split("/")[-1].split('.')[0].split('_')[1])])  # row, col
+
+
         sample = {'input': img, 'position': img_pos}
-        
-        if self.transform:
-            sample = self.transform(sample)
-        return sample 
-
-class ToTensor(object):
-    def __call__(self, sample):
-        img = sample['input']
-        img = VF.to_tensor(img)
-        sample['input'] = img
+        # if self.transform:
+        #     sample = self.transform(img)
         return sample
-    
-class Compose(object):
-    def __init__(self, transforms):
-        self.transforms = transforms
-
-    def __call__(self, img):
-        for t in self.transforms:
-            img = t(img)
-        return img
 
 def bag_dataset(args, csv_file_path):
-    transformed_dataset = BagDataset(csv_file=csv_file_path,
-                                    transform=Compose([
-                                        ToTensor()
-                                    ]))
-    dataloader = DataLoader(transformed_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers, drop_last=False)
+    transformed_dataset = BagDataset(csv_file=csv_file_path, input_c=args.input_c)
+    dataloader = DataLoader(transformed_dataset, batch_size=args.batch_size, shuffle=False,
+                            num_workers=args.num_workers, drop_last=False)
     return dataloader, len(transformed_dataset)
+
 
 def test(args, bags_list, milnet):
     milnet.eval()
@@ -65,7 +62,7 @@ def test(args, bags_list, milnet):
         feats_list = []
         pos_list = []
         classes_list = []
-        csv_file_path = glob.glob(os.path.join(bags_list[i], '*.'+args.patch_ext))
+        csv_file_path = glob.glob(os.path.join(bags_list[i], '*.' + args.patch_ext))
         dataloader, bag_size = bag_dataset(args, csv_file_path)
         with torch.no_grad():
             for iteration, batch in enumerate(dataloader):
@@ -84,58 +81,61 @@ def test(args, bags_list, milnet):
             ins_classes = torch.from_numpy(classes_arr).cuda()
             bag_prediction, A, _ = milnet.b_classifier(bag_feats, ins_classes)
             bag_prediction = torch.sigmoid(bag_prediction).squeeze().cpu().numpy()
-            if len(bag_prediction.shape)==0 or len(bag_prediction.shape)==1:
+            if len(bag_prediction.shape) == 0 or len(bag_prediction.shape) == 1:
                 bag_prediction = np.atleast_1d(bag_prediction)
             benign = True
             num_pos_classes = 0
-            for c in range(args.num_classes):          
+            for c in range(args.num_classes):
                 if bag_prediction[c] >= args.thres[c]:
                     attentions = A[:, c].cpu().numpy()
                     num_pos_classes += 1
-                    if benign: # first class detected
+                    if benign:  # first class detected
                         print(bags_list[i] + ' is detected as: ' + args.class_name[c])
                         colored_tiles = np.matmul(attentions[:, None], colors[c][None, :])
                     else:
-                        print('and ' + args.class_name[c])          
+                        print('and ' + args.class_name[c])
                         colored_tiles = colored_tiles + np.matmul(attentions[:, None], colors[c][None, :])
-                    benign = False # set flag
+                    benign = False  # set flag
             if benign:
                 print(bags_list[i] + ' is detected as: benign')
                 attentions = torch.sum(A, 1).cpu().numpy()
                 colored_tiles = np.matmul(attentions[:, None], colors[0][None, :]) * 0
             colored_tiles = (colored_tiles / num_pos_classes)
             colored_tiles = exposure.rescale_intensity(colored_tiles, out_range=(0, 1))
-            color_map = np.zeros((np.amax(pos_arr, 0)[0]+1, np.amax(pos_arr, 0)[1]+1, 3))
+            color_map = np.zeros((np.amax(pos_arr, 0)[0] + 1, np.amax(pos_arr, 0)[1] + 1, 3))
             for k, pos in enumerate(pos_arr):
                 color_map[pos[0], pos[1]] = colored_tiles[k]
             slide_name = bags_list[i].split(os.sep)[-1]
-            color_map = transform.resize(color_map, (color_map.shape[0]*32, color_map.shape[1]*32), order=0)
-            io.imsave(os.path.join(args.map_path, slide_name+'.png'), img_as_ubyte(color_map))
+            color_map = transform.resize(color_map, (color_map.shape[0] * 32, color_map.shape[1] * 32), order=0)
+            io.imsave(os.path.join(args.map_path, slide_name + '.png'), img_as_ubyte(color_map))
             if args.export_scores:
                 df_scores = pd.DataFrame(A.cpu().numpy())
                 pos_arr_str = [str(s) for s in pos_arr]
                 df_scores['pos'] = pos_arr_str
-                df_scores.to_csv(os.path.join(args.score_path, slide_name+'.csv'), index=False)
-                
-                
+                df_scores.to_csv(os.path.join(args.score_path, slide_name + '.csv'), index=False)
+
+
 if __name__ == '__main__':
     warnings.filterwarnings('ignore')
-    parser = argparse.ArgumentParser(description='Testing workflow includes attention computing and color map production')
+    parser = argparse.ArgumentParser(
+        description='Testing workflow includes attention computing and color map production')
     parser.add_argument('--num_classes', type=int, default=2, help='Number of output classes')
     parser.add_argument('--batch_size', type=int, default=64, help='Batch size of feeding patches')
     parser.add_argument('--num_workers', type=int, default=0)
     parser.add_argument('--feats_size', type=int, default=512)
+    parser.add_argument('--input_c', default=5, type=int, help='Number of input channels [5]')
     parser.add_argument('--thres', nargs='+', type=float, default=[0.7371, 0.2752])
     parser.add_argument('--class_name', nargs='+', type=str, default=None)
-    parser.add_argument('--embedder_weights', type=str, default='test/weights/embedder.pth')
-    parser.add_argument('--aggregator_weights', type=str, default='test/weights/aggregator.pth')
-    parser.add_argument('--bag_path', type=str, default='test/patches')
-    parser.add_argument('--patch_ext', type=str, default='jpg')
+    parser.add_argument('--embedder_weights', type=str, default='/mnt/yifan/data/blackgrass/embedder.pth')
+    parser.add_argument('--aggregator_weights', type=str,
+                        default='/mnt/share/yifan/code/dsmil-wsi/weights/12012021/1.pth')
+    parser.add_argument('--bag_path', type=str, default='/mnt/yifan/data/blackgrass/test/')
+    parser.add_argument('--patch_ext', type=str, default='jpeg')
     parser.add_argument('--map_path', type=str, default='test/output')
     parser.add_argument('--export_scores', type=int, default=0)
     parser.add_argument('--score_path', type=str, default='test/score')
     args = parser.parse_args()
-    
+
     if args.embedder_weights == 'ImageNet':
         print('Use ImageNet features')
         resnet = models.resnet18(pretrained=True, norm_layer=nn.BatchNorm2d)
@@ -144,11 +144,11 @@ if __name__ == '__main__':
     for param in resnet.parameters():
         param.requires_grad = False
     resnet.fc = nn.Identity()
-    i_classifier = mil.IClassifier(resnet, args.feats_size, output_class=args.num_classes).cuda()
+    i_classifier = mil.IClassifier(resnet, args.feats_size, output_class=args.num_classes, input_c=args.input_c).cuda()
     b_classifier = mil.BClassifier(input_size=args.feats_size, output_class=args.num_classes).cuda()
     milnet = mil.MILNet(i_classifier, b_classifier).cuda()
 
-    if args.embedder_weights !=  'ImageNet':
+    if args.embedder_weights != 'ImageNet':
         state_dict_weights = torch.load(args.embedder_weights)
         new_state_dict = OrderedDict()
         for i in range(4):
@@ -159,7 +159,7 @@ if __name__ == '__main__':
             new_state_dict[name] = v
         i_classifier.load_state_dict(new_state_dict, strict=False)
 
-    state_dict_weights = torch.load(args.aggregator_weights) 
+    state_dict_weights = torch.load(args.aggregator_weights)
     state_dict_weights["i_classifier.fc.weight"] = state_dict_weights["i_classifier.fc.0.weight"]
     state_dict_weights["i_classifier.fc.bias"] = state_dict_weights["i_classifier.fc.0.bias"]
     milnet.load_state_dict(state_dict_weights, strict=False)

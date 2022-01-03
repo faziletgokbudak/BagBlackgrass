@@ -18,10 +18,10 @@ import cv2
 
 
 class BagDataset():
-    def __init__(self, csv_file, transform=None):
+    def __init__(self, csv_file, transform=None, input_c=5):
         self.files_list = csv_file
         self.transform = transform
-
+        self.input_c = input_c
         # self.lists = []
         # self.root = "/mnt/yifan/data/blackgrass/single/"
         # for path in open("/mnt/yifan/data/blackgrass/blackgrass/data_table.txt"):
@@ -60,7 +60,7 @@ class BagDataset():
         temp_path = self.files_list[idx]
         res = temp_path.split("_")
 
-        input_channel = 5
+        input_channel = self.input_c
         img = cv2.imread(temp_path, -1)[:, :, 0:1]
         img = transforms.functional.to_tensor(img)
         for ind in range(input_channel - 1):
@@ -94,7 +94,7 @@ class BagDataset():
 #
 
 def bag_dataset(args, csv_file_path):
-    transformed_dataset = BagDataset(csv_file=csv_file_path)
+    transformed_dataset = BagDataset(csv_file=csv_file_path, input_c=args.input_c)
     dataloader = DataLoader(transformed_dataset, batch_size=args.batch_size, shuffle=False,
                             num_workers=args.num_workers, drop_last=False)
     return dataloader, len(transformed_dataset)
@@ -182,6 +182,7 @@ def compute_tree_feats(args, bags_list, embedder_low, embedder_high, save_path=N
 def main():
     parser = argparse.ArgumentParser(description='Compute TCGA features from SimCLR embedder')
     parser.add_argument('--num_classes', default=2, type=int, help='Number of output classes [2]')
+    parser.add_argument('--input_c', default=5, type=int, help='Number of input channels [5]')
     parser.add_argument('--batch_size', default=8, type=int, help='Batch size of dataloader [128]')
     parser.add_argument('--num_workers', default=4, type=int, help='Number of threads for datalodaer')
     parser.add_argument('--gpu_index', type=int, nargs='+', default=(0,), help='GPU ID(s) [0]')
@@ -194,7 +195,11 @@ def main():
                         help='Folder of the pretrained weights of high magnification, FOLDER < `simclr/runs/[FOLDER]`')
     parser.add_argument('--weights_low', default=None, type=str,
                         help='Folder of the pretrained weights of low magnification, FOLDER <`simclr/runs/[FOLDER]`')
+<<<<<<< HEAD
     parser.add_argument('--dataset', default='/home/fg405/rds/hpc-work/IMAGE_ARCHIVE/single/', type=str,
+=======
+    parser.add_argument('--dataset', default='/mnt/yifan/data/blackgrass/', type=str,
+>>>>>>> 2494109316606d8d0502dc55d9c7cd6aa27931c8
                         help='Dataset folder name [TCGA-lung-single]')
     args = parser.parse_args()
     gpu_ids = tuple(args.gpu_index)
@@ -294,17 +299,21 @@ def main():
         bags_path = os.path.join('WSI', args.dataset, 'pyramid', '*', '*')
     else:
         bags_path = os.path.join('WSI', args.dataset, 'single', '*', '*')
-    feats_path = os.path.join('datasets', args.dataset)
+    feats_path = os.path.join(args.dataset, "features")
 
     os.makedirs(feats_path, exist_ok=True)
     bags_list = []
     print('bag path', bags_path)
     bags_list_temp = glob.glob(bags_path)  ##get the bags list according to Red Channel
     for i in bags_list_temp:
-        if int(i.split("_")[-4]) == 1: #it was 4 before
+        if int(i.split("_")[-4]) == 1:
             bags_list.append(i)
+<<<<<<< HEAD
 
     print(bags_list)
+=======
+    #
+>>>>>>> 2494109316606d8d0502dc55d9c7cd6aa27931c8
     if args.magnification == 'tree':
         compute_tree_feats(args, bags_list, i_classifier_l, i_classifier_h, feats_path, 'fusion')
     else:
@@ -318,11 +327,11 @@ def main():
         bag_csvs = glob.glob(os.path.join(item, '*.csv'))
         bag_df = pd.DataFrame(bag_csvs)
         bag_df['label'] = i
-        bag_df.to_csv(os.path.join('datasets', args.dataset, item.split(os.path.sep)[3] + '.csv'), index=False)
+        bag_df.to_csv(os.path.join(args.dataset, "features", item.split(os.path.sep)[-2] + '.csv'), index=False)
         all_df.append(bag_df)
     bags_path = pd.concat(all_df, axis=0, ignore_index=True)
     bags_path = shuffle(bags_path)
-    bags_path.to_csv(os.path.join(args.dataset, "bags_all" + '.csv'), index=False)
+    bags_path.to_csv(os.path.join(args.dataset, "features", "bags_all" + '.csv'), index=False)
 
 
 if __name__ == '__main__':

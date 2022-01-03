@@ -1,0 +1,14 @@
+/home/fg405/.conda/envs/dsmil/lib/python3.7/site-packages/torchvision/transforms/functional.py:365: UserWarning: Argument interpolation should be of type InterpolationMode instead of int. Please, use InterpolationMode enum.
+  "Argument interpolation should be of type InterpolationMode instead of int. "
+/home/fg405/.conda/envs/dsmil/lib/python3.7/site-packages/torch/optim/lr_scheduler.py:509: UserWarning: To get the last learning rate computed by the scheduler, please use `get_last_lr()`.
+  "please use `get_last_lr()`.", UserWarning)
+Running on: cuda
+Feature extractor: resnet18
+Pre-trained weights not found. Training from scratch.
+saved
+saved
+saved
+saved
+saved
+saved
+saved

@@ -10,6 +10,7 @@ gpu_ids: (0,)
 
 model:
   out_dim: 256
+  input_c: 5
   base_model: "resnet18"
 
 dataset:
@@ -17,6 +18,9 @@ dataset:
   input_shape: (224,224,3)
   num_workers: 0
   valid_size: 0.1
+  input_c: 5
+  root_dir: "/mnt/yifan/data/blackgrass"
+  list_dir: "/mnt/yifan/data/blackgrass/blackgrass/data_table.txt"
 
 loss:
   temperature: 0.5

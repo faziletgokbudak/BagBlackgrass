@@ -17,11 +17,13 @@ np.random.seed(0)
 
 
 class Dataset():
-    def __init__(self, csv_file, transform=None):
+    def __init__(self, csv_file, transform=None, input_c=5, data_root="/mnt/yifan/data/blackgrass",
+                 list_dir="/mnt/yifan/data/blackgrass/blackgrass/data_table.txt"):
         self.files_list = pd.read_csv(csv_file)
         self.lists = []
-        self.root = "/mnt/yifan/data/blackgrass/single/"
-        for path in open("/mnt/yifan/data/blackgrass/blackgrass/data_table.txt"):
+        self.input_c = input_c
+        self.root = data_root + "/single/"
+        for path in open(list_dir):
             if "tif" not in path:
                 continue
             else:
@@ -45,7 +47,7 @@ class Dataset():
     def __getitem__(self, idx):
         temp_path = self.lists[idx].split()
         # path_id = "/" + choice(os.listdir(self.root + temp_path[-1] + '/' + temp_path[0].replace(".tif", "")))
-        input_channel = 5
+        input_channel = self.input_c
         img = cv2.imread(self.root + temp_path[-1] + '/' + temp_path[0].replace(".tif", "") + "/" + temp_path[-2])[:, :,
               0:1]
         img = transforms.functional.to_tensor(img)
@@ -75,16 +77,20 @@ class Dataset():
 
 class DataSetWrapper(object):
 
-    def __init__(self, batch_size, num_workers, valid_size, input_shape, s):
+    def __init__(self, batch_size, num_workers, valid_size, input_shape, s, input_c, root_dir, list_dir):
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.valid_size = valid_size
         self.s = s
+        self.input_c = input_c
         self.input_shape = eval(input_shape)
+        self.root = root_dir
+        self.lists = list_dir
 
     def get_data_loaders(self):
         data_augment = self._get_simclr_pipeline_transform()
-        train_dataset = Dataset(csv_file='all_patches.csv', transform=SimCLRDataTransform(data_augment))
+        train_dataset = Dataset(csv_file='all_patches.csv', transform=SimCLRDataTransform(data_augment),
+                                input_c=self.input_c, data_root=self.root, list_dir=self.lists)
         train_loader, valid_loader = self.get_train_validation_data_loaders(train_dataset)
         return train_loader, valid_loader
 

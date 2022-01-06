@@ -7,7 +7,7 @@ import torchvision.models as models
 import torchvision.transforms.functional as VF
 from torchvision import transforms
 
-import sys, argparse, os, glob, copy
+import re, sys, argparse, os, glob, copy
 import pandas as pd
 import numpy as np
 from PIL import Image
@@ -58,15 +58,21 @@ class BagDataset():
         #     img = torch.cat((img, img_new), 0)
 
         temp_path = self.files_list[idx]
-        res = temp_path.split("_")
+        #res = temp_path.split("_")
 
         input_channel = self.input_c
         img = cv2.imread(temp_path, -1)[:, :, 0:1]
         img = transforms.functional.to_tensor(img)
         for ind in range(input_channel - 1):
-            new_path = "_".join(res[0:len(res) - 5]) + "_" + str(ind + 2) + "_" + "_".join(res[len(res) - 4:len(res)])
+            pattern = re.compile("IMG_[0-9]+_")
+            m = list(re.finditer(pattern, temp_path))[-1]
+            dir_path = temp_path[:m.start(0)]
+            img_path_list = temp_path[m.start(0):].split('_')
+            new_path = dir_path + '_'.join(img_path_list[:2]) + '_' + str(ind + 2) + "_" + '_'.join(img_path_list[3:])
+            print(dir_path)
+            #new_path = "_".join(res[0:len(res) - 4]) + "_" + str(ind + 2) + "_" + "_".join(res[len(res) - 3:len(res)])
+            #new_path = "_".join(res[0:len(res) - 5]) + "_" + str(ind + 2) + "_" + "_".join(res[len(res) - 4:len(res)])
             print('new path:', new_path)
-            print('res', res)
             img_new = cv2.imread(new_path, -1)[:, :, 0:1]
             img_new = transforms.functional.to_tensor(img_new)
             img = torch.cat((img, img_new), 0)
@@ -195,12 +201,8 @@ def main():
                         help='Folder of the pretrained weights of high magnification, FOLDER < `simclr/runs/[FOLDER]`')
     parser.add_argument('--weights_low', default=None, type=str,
                         help='Folder of the pretrained weights of low magnification, FOLDER <`simclr/runs/[FOLDER]`')
-<<<<<<< HEAD
-    parser.add_argument('--dataset', default='/home/fg405/rds/hpc-work/IMAGE_ARCHIVE/single/', type=str,
-=======
-    parser.add_argument('--dataset', default='/mnt/yifan/data/blackgrass/', type=str,
->>>>>>> 2494109316606d8d0502dc55d9c7cd6aa27931c8
-                        help='Dataset folder name [TCGA-lung-single]')
+    parser.add_argument('--dataset', default='/home/fg405/rds/hpc-work/IMAGE_ARCHIVE/single/', type=str,help='Dataset folder name [TCGA-lung-single]')
+    #parser.add_argument('--dataset', default='/mnt/yifan/data/blackgrass/', type=str,help='Dataset folder name [TCGA-lung-single]')
     args = parser.parse_args()
     gpu_ids = tuple(args.gpu_index)
     os.environ['CUDA_VISIBLE_DEVICES'] = ','.join(str(x) for x in gpu_ids)
@@ -304,31 +306,38 @@ def main():
     os.makedirs(feats_path, exist_ok=True)
     bags_list = []
     print('bag path', bags_path)
-    bags_list_temp = glob.glob(bags_path)  ##get the bags list according to Red Channel
+    bags_list_temp = glob.glob(bags_path)  ##get the bags list according to Blue Channel
     for i in bags_list_temp:
-        if int(i.split("_")[-4]) == 1:
-            bags_list.append(i)
-<<<<<<< HEAD
+        print(i)
 
-    print(bags_list)
-=======
-    #
->>>>>>> 2494109316606d8d0502dc55d9c7cd6aa27931c8
+        r = re.compile("IMG_[0-9]+_1_")
+        pattern = re.compile("IMG_[0-9]+_")
+        print(re.search(pattern,i))
+        if re.search(pattern,i):
+        # if int(i.split("_")[2]) == 1:
+            bags_list.append(i)
+    print('bag:', bags_list)
     if args.magnification == 'tree':
         compute_tree_feats(args, bags_list, i_classifier_l, i_classifier_h, feats_path, 'fusion')
     else:
         compute_feats(args, bags_list, i_classifier, feats_path, args.magnification)
-    n_classes = glob.glob(os.path.join('datasets', args.dataset, '*' + os.path.sep))
+    print(os.path.join('datasets', os.path.join(args.dataset,'single'), '*' + os.path.sep))
+    n_classes = glob.glob(os.path.join('datasets', os.path.join(args.dataset,'features'), '*' + os.path.sep))
+    
     n_classes = sorted(n_classes)
-    #print('n_classes', n_classes)
+    print('n_classes', n_classes)
     print('feats_path', feats_path)
     all_df = []
     for i, item in enumerate(n_classes):
         bag_csvs = glob.glob(os.path.join(item, '*.csv'))
+        print(bag_csvs)
         bag_df = pd.DataFrame(bag_csvs)
+        print(bag_df)
         bag_df['label'] = i
+        print(os.path.join(args.dataset, "features", item.split(os.path.sep)[-2] + '.csv'))
         bag_df.to_csv(os.path.join(args.dataset, "features", item.split(os.path.sep)[-2] + '.csv'), index=False)
         all_df.append(bag_df)
+        print(all_df)
     bags_path = pd.concat(all_df, axis=0, ignore_index=True)
     bags_path = shuffle(bags_path)
     bags_path.to_csv(os.path.join(args.dataset, "features", "bags_all" + '.csv'), index=False)

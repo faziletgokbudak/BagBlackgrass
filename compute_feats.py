@@ -76,7 +76,7 @@ class BagDataset():
             img_new = cv2.imread(new_path, -1)[:, :, 0:1]
             img_new = transforms.functional.to_tensor(img_new)
             img = torch.cat((img, img_new), 0)
-
+            print('img:', img.shape)
         # if self.transform:
         #     sample = self.transform(img)
         return img
@@ -183,6 +183,30 @@ def compute_tree_feats(args, bags_list, embedder_low, embedder_high, save_path=N
                 df.to_csv(os.path.join(save_path, bags_list[i].split(os.path.sep)[-2],
                                        bags_list[i].split(os.path.sep)[-1] + '.csv'), index=False, float_format='%.4f')
             print('\n')
+
+def sort_based_on_classnames(class_list):
+    nobg_dirname = ''
+    new_class_list = []
+    if len(class_list) == 2:
+        for ind, class_name in enumerate(class_list):
+            if 'no_blackgrass' in class_name:
+                new_class_list.append(class_name)
+                class_list.pop(ind)
+        new_class_list.append(class_list[0])
+        if len(new_class_list) < 2:
+            return -1
+
+    else:
+        for ind, class_name in enumerate(class_list):
+            if 'no_blackgrass' not in class_name:
+                new_class_list.append(class_name)
+            else:
+                nobg_dirname = class_name
+        if nobg_dirname:
+            new_class_list.append(nobg_dirname)
+
+    print(new_class_list)
+    return new_class_list
 
 
 def main():
@@ -309,9 +333,7 @@ def main():
     bags_list_temp = glob.glob(bags_path)  ##get the bags list according to Blue Channel
     for i in bags_list_temp:
         print(i)
-
-        r = re.compile("IMG_[0-9]+_1_")
-        pattern = re.compile("IMG_[0-9]+_")
+        pattern = re.compile("IMG_[0-9]+_1_")
         print(re.search(pattern,i))
         if re.search(pattern,i):
         # if int(i.split("_")[2]) == 1:
@@ -324,7 +346,7 @@ def main():
     print(os.path.join('datasets', os.path.join(args.dataset,'single'), '*' + os.path.sep))
     n_classes = glob.glob(os.path.join('datasets', os.path.join(args.dataset,'features'), '*' + os.path.sep))
     
-    n_classes = sorted(n_classes)
+    n_classes = sort_based_on_classnames(n_classes)
     print('n_classes', n_classes)
     print('feats_path', feats_path)
     all_df = []

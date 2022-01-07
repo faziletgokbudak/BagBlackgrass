@@ -18,4 +18,4 @@ source /usr/local/software/archive/linux-scientific7-x86_64/gcc-9/miniconda3-4.7
 
 conda activate dsmil
 
-python compute_feats.py # --dataset=/home/fg405/rds/hpc-work/IMAGE_ARCHIVE
+python compute_feats.py  --dataset=/home/fg405/rds/hpc-work/IMAGE_ARCHIVE

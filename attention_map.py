@@ -7,7 +7,7 @@ import torchvision.models as models
 import torchvision.transforms.functional as VF
 from torchvision import transforms
 
-import sys, argparse, os, glob
+import re, sys, argparse, os, glob
 import pandas as pd
 import numpy as np
 from PIL import Image
@@ -33,7 +33,13 @@ class BagDataset():
         img = cv2.imread(temp_path, -1)[:, :, 0:1]
         img = transforms.functional.to_tensor(img)
         for ind in range(input_channel - 1):
-            new_path = "_".join(res[0:len(res) - 5]) + "_" + str(ind + 2) + "_" + "_".join(res[len(res) - 4:len(res)])
+            #new_path = "_".join(res[0:len(res) - 5]) + "_" + str(ind + 2) + "_" + "_".join(res[len(res) - 4:len(res)])
+            pattern = re.compile("IMG_[0-9]+_")
+            m = list(re.finditer(pattern, temp_path))[-1]
+            dir_path = temp_path[:m.start(0)]
+            img_path_list = temp_path[m.start(0):].split('_')
+            new_path = dir_path + '_'.join(img_path_list[:2]) + '_' + str(ind + 2) + "_" + '_'.join(img_path_list[3:])
+            print('dir and new path:',dir_path, new_path)
             img_new = cv2.imread(new_path, -1)[:, :, 0:1]
             img_new = transforms.functional.to_tensor(img_new)
             img = torch.cat((img, img_new), 0)

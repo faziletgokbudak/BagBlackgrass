@@ -184,7 +184,7 @@ def compute_tree_feats(args, bags_list, embedder_low, embedder_high, save_path=N
                                        bags_list[i].split(os.path.sep)[-1] + '.csv'), index=False, float_format='%.4f')
             print('\n')
 
-def sort_based_on_classnames(class_list):
+def sort_classnames(class_list):
     nobg_dirname = ''
     new_class_list = []
     if len(class_list) == 2:
@@ -346,7 +346,7 @@ def main():
     print(os.path.join('datasets', os.path.join(args.dataset,'single'), '*' + os.path.sep))
     n_classes = glob.glob(os.path.join('datasets', os.path.join(args.dataset,'features'), '*' + os.path.sep))
     
-    n_classes = sort_based_on_classnames(n_classes)
+    n_classes = sort_classnames(n_classes)
     print('n_classes', n_classes)
     print('feats_path', feats_path)
     all_df = []

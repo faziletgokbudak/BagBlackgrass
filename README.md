@@ -1,14 +1,15 @@
-# DSMIL: Dual-stream multiple instance learning networks
-This is the Pytorch implementation for the multiple instance learning model described in the paper [Dual-stream Multiple Instance Learning Network for Whole Slide Image Classification with Self-supervised Contrastive Learning](https://arxiv.org/abs/2011.08939) (_CVPR 2021, accepted for oral presentation_).  
-
-<div align="center">
+# DSMIL: Dual-stream multiple instance learning networks for blackgrass detection
+This repository is heavily based on [Dual-stream Multiple Instance Learning Network for Whole Slide Image Classification with Self-supervised Contrastive Learning](https://github.com/binli123/dsmil-wsi). It is modified for blackgrass detection project, whose dataset contains images with different levels of blackgrass, such as dense, medium, or sparse blackgrass.
+<!-- This is the Pytorch implementation for the multiple instance learning model described in the paper [Dual-stream Multiple Instance Learning Network for Whole Slide Image Classification with Self-supervised Contrastive Learning](https://arxiv.org/abs/2011.08939) (_CVPR 2021, accepted for oral presentation_).  
+ -->
+<!-- <div align="center">
   <img src="thumbnails/overview.png" width="700px" />
 </div>
 
 <div align="center">
   <img src="thumbnails/overview-2.png" width="700px" />
 </div>
-
+ -->
 ## Installation
 Install [anaconda/miniconda](https://docs.conda.io/en/latest/miniconda.html)  
 Required packages
@@ -103,17 +104,17 @@ Useful arguments:
 ```
 ## Feature vector csv files explanation
 1. For each bag, there is a .csv file where each row contains the feature of an instance. The .csv is named as "_bagID_.csv" and put into a folder named "_dataset-name_/_category_/".  
-
+<!-- 
 <div align="center">
   <img src="thumbnails/bag.png" width="700px" />
 </div>  
-
+ -->
 2. There is a "_dataset-name_.csv" file with two columns where the first column contains the paths to all _bagID_.csv files, and the second column contains the bag labels.  
 
-<div align="center">
+<!-- <div align="center">
   <img src="thumbnails/bags.png" width="700px" />
 </div>  
-
+ -->
 3. Labels.
 > For binary classifier, use `1` for positive bags and `0` for negative bags. Use `--num_classes=1` at training.  
 > For multi-class classifier (`N` positive classes and one optional negative class), use `0~(N-1)` for positive classes. If you have a negative class (not belonging to any one of the positive classes), use `N` for its label. Use `--num_classes=N` (`N` equals the number of **positive classes**) at training.
